@@ -2,41 +2,297 @@
 Ce jeu permet de jouer au Black Jack:
     - seul, en multijoueur ou avec des IA
     - avec des mises
+
+le dictionnaire joueurs est de la forme:
+
+{
+    'joueur': nom du joueur (str),
+    'intelligence: 'humaine' ou 'artificielle',
+    'main': [{'valeur': valeur de la carte (str), 'couleur': couleur de la carte (str)}, ...],
+    'richesse': richesse actuelle, dont on a déjà déduit la mise (int)
+    'mise': mise actuelle (int)
+}
+
+croupier est de la forme: [{'valeur': valeur de la carte, 'couleur': couleur de la carte}, ...]
 """
 
-def tirer():
+import random as rd
+
+
+def creation_sabot():
+    """ retourne une liste contenant toutes les cartes du sabot mélangées """
+    valeurs = [str(i) for i in range(1, 11)] + ['J', 'Q', 'K']
+    couleurs = ['pique', 'coeur', 'carreau', 'trefle']
+    sabot = 6 * [{'valeur': valeur, 'couleur': couleur} for couleur in couleurs for valeur in valeurs]
+    rd.shuffle(sabot)
+    return sabot
+
+
+def score(main: list):
     """
-    Distribue une carte au joueur, 
+    calcule la valeur totale d'une main et renoie [vmin, vmax]
+    (deux éléments car valeur dépend des AS et 2 valeurs idéales possibles selon le contexte)
+    """
+    AS = 0
+    total = 0
+    for carte in main:
+        if carte['valeur'] in ['10', 'J', 'Q', 'K']:
+            total += 10
+
+        elif carte['valeur'] == '1':
+            AS += 1
+
+        else:
+            total += int(carte['valeur'])
+
+    total_min = total + AS
+
+    if AS == 0:
+        total_max = total
+    else:
+        total_max = total + 11 * AS - AS + 1
+
+    return {'mini': total_min, 'maxi': total_max}
+
+
+def choix(texte: str, alternatives: list):
+    """
+    Remplace les boutons en attendant une interface graphique,
+    permet de simuler la sélection d'un bouton
+    """
+    action = input('\n' + texte)
+    while action not in alternatives:
+
+        action = input('\n' + texte)
+
+    return action
+
+
+def entree_valeur(texte: str):
+    """
+    Remplace temporairement la sélection de valeurs
+    par jetons en attendant l'interface graphique
+    """
+    valeur = 1
+    while valeur % 5 != 0 or valeur <= 0:
+        valeur = int(input('\n' + texte))
+
+    return valeur
+
+
+def tirer(main: list):
+    """ Fait tirer une carte à la main """
+    global sabot
+    main.append(sabot[0])
+    del sabot[0]
+
+
+def affichage(joueur: dict()):
+    """ affiche clairement la situation de joueur """
+    global joueurs
+    print('\n' + joueur + ": ", "\n")
+    for cle in joueurs[joueur].keys():
+        print(cle, joueurs[joueur][cle])
+
+
+def choix_nb_joueurs():
+    """ retourne le nombre de joueurs demandé par l'utilisateur """
+    nombre_de_joueurs = int(input("Indiquez le nombre de joueurs désiré (IA + joueurs réels) "))
+    while not 0 < nombre_de_joueurs <= 7:
+        nombre_de_joueurs = int(input("Indiquez le nombre de joueurs désiré (IA + joueurs réels) "))
+
+    return nombre_de_joueurs
+
+
+def creation_joueurs():
+    """ Fait entrer leurs noms aux utilisateurs """
+    joueurs = {}
+    i = 0
+    while i < nb_joueurs:
+        joueur = str(input('\n' + 'Nom du nouveau joueur (si fin des joueurs ne rien écrire): '))
+
+        if joueur == "":
+            i = nb_joueurs
+
+        elif joueur not in joueurs.keys():
+            joueurs[joueur] = {'intelligence': 'humaine', 'main': []}
+            i += 1
+
+    return joueurs
+
+
+def creation_IA():
+    """ Complète la liste de joueurs avec des IA pour qu'il y ait la bon nombre de joueurs """
+    global joueurs, nb_joueurs
+    for nom_IA in ['René', 'Gisèle', 'Elisa', 'Juliette', 'Eloa', 'Maïmouna', 'Raphaël',
+                   'Roman', 'Quentin', 'Kévin', 'Anne', 'Félix', 'Sylvie', 'Jeanne']:
+        if not(nom_IA in joueurs.keys()) and len(joueurs) < nb_joueurs:
+            joueurs[nom_IA] = {'intelligence': 'artificielle', 'main': []}
+
+
+def initialisation_richesses():
+    """ Demande la richesse de départ à l'utilisateur, puis l'assigne à chaque joueur """
+    global joueurs
+    richesse_initiale = entree_valeur("Somme initiale? ")
+    for joueur in joueurs.keys():
+        joueurs[joueur]['richesse'] = richesse_initiale
+
+
+def initialisation_mains():
+    """ associe une main vide à chaque joueur """
+    global croupier, joueurs
+    croupier = []
+    for joueur in joueurs.keys():
+        joueurs[joueur]['main'] = []
+
+
+def distribution():
+    """
+    distribue les cartes aux joueurs et au croupier
+    dans le même ordre que dans la vraie vie au cas où ça pourrait aider pour l'interface graphique
+    """
+    global croupier, joueurs
+    for repet in range(2):
+        for joueur in joueurs.keys():
+            tirer(joueurs[joueur]['main'])
+
+        if repet == 0:
+            tirer(croupier)
+
+        else:
+            tirer(croupier)
+
+
+def mise_artificielle(joueur: str):
+    """
+    Fait miser l'intelligence artificielle correspondant au joueur
+    (différentes prises de risque en fonction des IA)
+    Ici version bêta à faire évoluer pour moins de répétition
+    """
+    global joueurs
+    if joueurs[joueur]['richesse'] < 50:
+        joueurs[joueur]['mise'] = joueurs[joueur]['richesse']
+
+    else:
+        joueurs[joueur]['mise'] = 50
+
+
+def mise_joueur(joueur: str):
+    """ Fait choisir une mise au joueur jusqu'à ce que celle-ci soit inférieure à sa richesse """
+    global joueurs
+    valeur = entree_valeur(joueur + ", que voulez-vous miser? ")
+    while valeur > joueurs[joueur]['richesse']:
+        valeur = entree_valeur("Cette mise est au-dessus de vos moyens. " +
+                               joueur + ", que voulez-vous miser? ")
+
+    joueurs[joueur]['mise'] = valeur
+
+
+def mise():
+    """ Fait miser tout le monde """
+    global joueurs
+    for joueur in joueurs.keys():
+        if joueurs[joueur]['intelligence'] == 'artificielle':
+            mise_artificielle(joueur)
+
+        else:
+            mise_joueur(joueur)
+
+        joueurs[joueur]['richesse'] -= joueurs[joueur]['mise']
+
+
+def black_jack():
+    """
+    Vérifie pour tous les joueurs s'ils ont Black Jack,
+    auquel cas ceux-ci réccupèrent 3/2 fois leur mise
+    """
+    pass
+
+
+def choix_tirer(joueur: str):
+    """
+    Distribue une carte au joueur,
     puis lui propose jusqu'à ce que celui-ci atteigne 21 de tirer une carte ou de rester
     """
+    global joueurs
+    continuer, action = True, 'tirer'
+    while continuer:
+        tirer(joueurs[joueur]['main'])
+        affichage(joueur)
+        continuer = action == 'tirer' and score(joueurs[joueur]['main'])['mini'] <= 21
+
+        if continuer:
+            action = choix(joueur + ', écrivez "tirer" pour tirer une carte, et "rester" pour rester avec votre main ', ['tirer', 'rester'])
+
+    if action == 'tirer':
+        affichage(joueur)
+        print('\n' + joueur + ", vous avez perdu la manche")
+        joueurs[joueur]['mise'] = 0
+        joueurs[joueur]['main'] = []
+
+
+def abandonner(joueur):
+    """ Le joueur réccupère la moitié de sa mise et perd sa main (comme s'il avait dépassé 21) """
+    global joueurs
+    joueurs[joueur]['richesse'] += joueurs[joueur]['mise'] // 2 - (joueurs[joueur]['mise'] // 2) % 5
+    joueurs[joueur]['mise'] = 0
+    joueurs[joueur]['main'] = []
+
+
+def split(joueur: str):
+    """ sépare la main du joueur en deux mains et distribue une carte par main """
     pass
 
 
-def abandonner():
-    """
-    Le joueur réccupère la moitié de sa mise et perd sa main (comme s'il avait dépassé 21)
-    """
-    pass
+# Paramétrage du croupier, des joueurs et des IA
+print()
+nb_joueurs = choix_nb_joueurs()
+joueurs = creation_joueurs()
+creation_IA()
 
+# Initialisation des richesses (au choix des joueurs), cliquable sur interface graphique
+initialisation_richesses()
 
-def split():
-    """
-    sépare la main du joueur en deux mains et distribue une carte par main
-    """
-    pass
+# Boucle while des manches:
+continuer = 'oui'
+while continuer == 'oui':
 
+    # Initialisation des mains
+    initialisation_mains()
 
-# Paramétrage du nombre de joueurs et d'IA
-# Initialisation intermace graphique
-# Initialisation des mises (au choix des joueurs)
+    # Initialisation du sabot (p, c, k, t = pique, coeur, carreau, trefle)
+    sabot = creation_sabot()
 
-# Boucle while des manches :
+    # Première mise des joueurs
+    mise()
 
     # Distribution des cartes
+    distribution()
 
-    # Boucle des joueurs :
+    # Black Jack
+    black_jack()
 
-        # Le joueur ou l'IA fait un seul choix :
+    # Boucle des joueurs
+    for joueur in joueurs.keys():
+        if joueurs[joueur]['intelligence'] == 'humaine':
+            affichage(joueur)
+            action = choix(joueur + ", voulez-vous 'rester', 'tirer', 'abandonner' ou 'split'? ", ['rester', 'tirer', 'abandonner', 'split'])
+
+            if action == 'tirer':
+                choix_tirer(joueur)
+
+            elif action == 'abandonner':
+                abandonner(joueur)
+
+            else:
+                split(joueur)
+
+            affichage(joueur)
+
+        else:
+            continue
+
+        # Le joueur ou l'IA fait un seul choix:
             # Tirer
             # Rester (pas de fonction associée au bouton car rien à faire)
             # Abandonner
@@ -46,16 +302,18 @@ def split():
         # Mise à jour de la main
         # La main perd s'il dépasse 21
 
-
-    # Boucle du croupier tq main_croupier < 17 :
+    # Boucle du croupier tq main_croupier < 17:
         # Le croupier tire une carte
 
     # Le croupier perd face aux joueurs restants s'il a plus de 21
 
-    # Boucle des résultats (une itération par joueur restant) :
+    # Boucle des résultats (une itération par joueur restant):
 
-        # Si main_croupier > main_joueur :
+        # Si main_croupier > main_joueur:
             # Croupier réccupère la mise du joueur
 
-        # Sinon :
-             # le joueur réccupère 2 fois sa mise
+        # Sinon:
+            # le joueur réccupère 2 fois sa mise
+
+    continuer = str(input('\n' + 'Voulez-vous continuer? Répondez "oui" ou "non": '))
+    print()

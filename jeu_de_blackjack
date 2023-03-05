@@ -91,7 +91,7 @@ def entree_valeur(texte: str):
 
 def tirer(main: list):
     """ Fait tirer une carte à la main """
-    global sabot
+    global sabot, joueurs
     main.append(sabot[0])
     del sabot[0]
 
@@ -142,7 +142,7 @@ def creation_IA():
 def initialisation_richesses():
     """ Demande la richesse de départ à l'utilisateur, puis l'assigne à chaque joueur """
     global joueurs
-    richesse_initiale = entree_valeur("Somme initiale? ")
+    richesse_initiale = entree_valeur("Richesse initiale? ")
     for joueur in joueurs.keys():
         joueurs[joueur]['richesse'] = richesse_initiale
 
@@ -216,6 +216,9 @@ def black_jack():
     - un joueur fait black jack
     - le croupier fait black jack
     - les deux à la fois
+
+    L'arrondi pour congruence à 5 de la division d'une mise
+    (lorsqu'un joueur remporte 3/2 de sa mise avantage le le joueur
     """
     global joueurs, croupier
     if detect_black_jack(croupier):
@@ -240,7 +243,7 @@ def black_jack():
                 print('\n', "contrairement au croupier,", joueur,
                       "a réalisé un black jack (", joueurs[joueur]['main'],
                       ") il réccupère donc 3/2 de sa mise")
-                joueurs[joueur]['richesse'] += joueurs[joueur]['mise'] + joueurs[joueur]['mise'] // 2 - (joueurs[joueur]['mise'] // 2) % 5 + 5
+                joueurs[joueur]['richesse'] += (3*joueurs[joueur]['mise'] + joueurs[joueur]['mise'] % 10) // 2
                 joueurs[joueur]['mise'] = 0
                 joueurs[joueur]['main'] = []
 
@@ -252,8 +255,8 @@ def explosion_joueur(joueur: str):
     de savoir si un joueur est encore actif dans le tour.
     """
     global joueurs
+    affichage(joueur)
     if score(joueurs[joueur]['main'])['mini'] > 21:
-        affichage(joueur)
         print('\n' + joueur + ", vous avez dépassé 21 et perdez donc la manche")
         joueurs[joueur]['mise'] = 0
         joueurs[joueur]['main'] = []
@@ -289,22 +292,28 @@ def choix_tirer(joueur: str):
     puis lui propose jusqu'à ce que celui-ci atteigne 21 de tirer une carte ou de rester
     """
     global joueurs
-    continuer, action = True, 'tirer'
-    while continuer:
+    action = 'tirer'
+    while action == 'tirer':
         tirer(joueurs[joueur]['main'])
-        affichage(joueur)
-        continuer = action == 'tirer' and score(joueurs[joueur]['main'])['mini'] <= 21
 
-        if continuer:
+        if score(joueurs[joueur]['main'])['mini'] <= 21:
+            affichage(joueur)
             action = choix(joueur + ', écrivez "tirer" pour tirer une carte, et "rester" pour rester avec votre main ', ['tirer', 'rester'])
+
+        else:
+            action = 'rester'
 
     explosion_joueur(joueur)
 
 
 def abandonner(joueur: str):
-    """ Le joueur réccupère la moitié de sa mise et perd sa main (comme s'il avait dépassé 21) """
+    """ 
+    Le joueur réccupère la moitié de sa mise et perd sa main (comme s'il avait dépassé 21)
+    L'arrondi pour congruence à 5 de la division de la mise avantage le croupier
+    pour empêcher qu'un joueur misant 5 ne puisse garder l'intégralité de sa mise
+    """
     global joueurs
-    joueurs[joueur]['richesse'] += joueurs[joueur]['mise'] // 2 - (joueurs[joueur]['mise'] // 2) % 5
+    joueurs[joueur]['richesse'] += (joueurs[joueur]['mise'] - joueurs[joueur]['mise'] % 10) // 2
     joueurs[joueur]['mise'] = 0
     joueurs[joueur]['main'] = []
 
@@ -373,7 +382,7 @@ while continuer == 'oui':
             # split (uniquement possible si le joueur possède une paire)
             # Rester (pas de fonction associée au bouton car rien à faire)
 
-        if mise == 0:
+        if joueurs[joueur]['mise'] == 0:
             pass
 
         elif joueurs[joueur]['intelligence'] == 'humaine':
@@ -415,5 +424,5 @@ while continuer == 'oui':
         print('\n', "Tous les joueurs sont éliminés, la partie est terminée")
         break
 
-    continuer = str(input('\n' + 'Voulez-vous continuer? Répondez "oui" ou "non": '))
+    continuer = choix('Voulez-vous continuer? Répondez "oui" ou "non": ', ['oui', 'non'])
     print()

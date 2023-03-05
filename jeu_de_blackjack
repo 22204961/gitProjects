@@ -307,7 +307,7 @@ def choix_tirer(joueur: str):
 
 
 def abandonner(joueur: str):
-    """ 
+    """
     Le joueur réccupère la moitié de sa mise et perd sa main (comme s'il avait dépassé 21)
     L'arrondi pour congruence à 5 de la division de la mise avantage le croupier
     pour empêcher qu'un joueur misant 5 ne puisse garder l'intégralité de sa mise

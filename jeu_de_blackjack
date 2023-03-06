@@ -52,7 +52,7 @@ def score(main: list):
     else:
         total_max = total + 11 * AS - AS + 1
 
-    return {'mini': total_min, 'maxi': total_max}
+    return {'min': total_min, 'max': total_max}
 
 
 def detect_black_jack(main: list):
@@ -256,7 +256,7 @@ def explosion_joueur(joueur: str):
     """
     global joueurs
     affichage(joueur)
-    if score(joueurs[joueur]['main'])['mini'] > 21:
+    if score(joueurs[joueur]['main'])['min'] > 21:
         print('\n' + joueur + ", vous avez dépassé 21 et perdez donc la manche")
         joueurs[joueur]['mise'] = 0
         joueurs[joueur]['main'] = []
@@ -296,7 +296,7 @@ def choix_tirer(joueur: str):
     while action == 'tirer':
         tirer(joueurs[joueur]['main'])
 
-        if score(joueurs[joueur]['main'])['mini'] <= 21:
+        if score(joueurs[joueur]['main'])['min'] <= 21:
             affichage(joueur)
             action = choix(joueur + ', écrivez "tirer" pour tirer une carte, et "rester" pour rester avec votre main ', ['tirer', 'rester'])
 

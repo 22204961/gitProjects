@@ -426,3 +426,4 @@ while continuer == 'oui':
 
     continuer = choix('Voulez-vous continuer? Répondez "oui" ou "non": ', ['oui', 'non'])
     print()
+    
